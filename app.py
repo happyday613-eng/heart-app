@@ -1,131 +1,140 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-from streamlit_drawable_canvas import st_canvas
 
-# 1. 페이지 기본 설정 및 모바일 스타일 조정
+# 1. 페이지 기본 설정
 st.set_page_config(
-    page_title="💖 AI 하트 연애 조율소",
-    page_icon="💖",
-    layout="centered"
+    page_title="🔥 3인 매력 배틀 리그",
+    page_icon="🏆",
+    layout="wide" # 세 사람을 한눈에 비교하기 위해 넓은 화면 레이아웃 사용
 )
 
+# 한글 깨짐 방지 스타일 설정
 st.markdown("""
     <style>
-    h1 { font-size: 1.8rem !important; text-align: center; }
-    h3 { font-size: 1.3rem !important; }
-    .stButton>button { width: 100%; height: 45px; font-weight: bold; font-size: 1rem; }
+    h1 { text-align: center; color: #4A90E2; font-size: 2.2rem !important; }
+    h2 { font-size: 1.5rem !important; }
+    .winner-box { background-color: #FFF3CD; border-left: 5px solid #FFD700; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("💖 AI 하트 그리기 & 연애 능력 테스트")
-st.write("아래 회색 캔버스 안에 손가락(터치)이나 마우스로 하트를 예쁘게 그려보세요. AI가 완벽도를 분석하여 당신의 **'진짜 연애 능력치'**를 감정합니다!")
+st.title("🏆 정혜영 vs 유수진 vs 이성희 매력 배틀 리그")
+st.write("각 인물의 역량을 실시간으로 평가하고 최고의 자리에 오를 우승자를 가려보세요!")
 st.markdown("---")
 
-# 2. 상단 제어 구역 (다시 그리기 버튼 배치)
-col_btn1, col_btn2 = st.columns([3, 1])
-with col_btn2:
-    # 다시 그리기 버튼을 누르면 세션을 리셋하여 캔버스를 깨끗하게 비웁니다.
-    if st.button("🔄 다시 그리기", type="secondary"):
-        st.rerun()
+# 2. 배틀 평가 항목 설정 (실무/매력 지표 5가지)
+categories = ['업무 추진력', '소통 능력', '위기 관리', '친화력', '열정 지수']
+N = len(categories)
 
-with col_btn1:
-    st.caption("✨ 선을 다 그리고 나면 아래로 스크롤하여 AI 분석 리포트를 확인하세요.")
+# 3. 3단 가로 레이아웃으로 세 사람의 점수 입력창 배치
+col1, col2, col3 = st.columns(3)
 
-# 3. 캔버스 설정
-canvas_size = 300
-canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.0)",  # 투명 채우기
-    stroke_width=5,                      # 스마트폰 터치용 도톰한 붓 두께
-    stroke_color="#DE1A1A",              # 하트 붉은 선
-    background_color="#F0F2F6",          # 캔버스 배경색
-    height=canvas_size,
-    width=canvas_size,
-    drawing_mode="freedraw",
-    key="canvas_heart_final",
-)
+with col1:
+    st.subheader("👩‍💼 정혜영 능력치 심사")
+    hy_1 = st.slider("정혜영 - 업무 추진력", 0, 100, 85, key="hy1")
+    hy_2 = st.slider("정혜영 - 소통 능력", 0, 100, 90, key="hy2")
+    hy_3 = st.slider("정혜영 - 위기 관리", 0, 100, 80, key="hy3")
+    hy_4 = st.slider("정혜영 - 친화력", 0, 100, 88, key="hy4")
+    hy_5 = st.slider("정혜영 - 열정 지수", 0, 100, 95, key="hy5")
+    hy_scores = [hy_1, hy_2, hy_3, hy_4, hy_5]
+    hy_total = sum(hy_scores)
 
-# ==========================================
-# [AI 판독 구역] 사용자가 그린 선 데이터 연산
-# ==========================================
-per = None
-if canvas_result.json_data is not None:
-    objects = canvas_result.json_data["objects"]
-    if len(objects) > 0:
-        user_x, user_y = [], []
-        for obj in objects:
-            if "path" in obj:
-                for p in obj["path"]:
-                    if p[0] in ["M", "L", "Q"]:
-                        user_x.append(p[-2])
-                        user_y.append(p[-1])
-        
-        if len(user_x) > 10:
-            user_x = np.array(user_x)
-            user_y = np.array(user_y)
-            
-            user_x_centered = user_x - np.mean(user_x)
-            user_y_centered = user_y - np.mean(user_y)
-            user_radius = np.max(np.sqrt(user_x_centered**2 + user_y_centered**2))
-            
-            if user_radius > 0:
-                user_x_norm = user_x_centered / user_radius * 16
-                user_y_norm = -user_y_centered / user_radius * 13
-                
-                t_perfect = np.linspace(0, 2 * np.pi, len(user_x_norm))
-                x_perfect = 16 * np.sin(t_perfect) ** 3
-                y_perfect = 13 * np.cos(t_perfect) - 5 * np.cos(2*t_perfect) - 2 * np.cos(3*t_perfect) - np.cos(4*t_perfect)
-                
-                distances = []
-                for ux, uy in zip(user_x_norm, user_y_norm):
-                    dist = np.min((x_perfect - ux)**2 + (y_perfect - uy)**2)
-                    distances.append(dist)
-                
-                mean_error = np.mean(distances)
-                per = int(max(0, min(100, 100 - (mean_error * 1.5))))
+with col2:
+    st.subheader("👩‍💻 유수진 능력치 심사")
+    sj_1 = st.slider("유수진 - 업무 추진력", 0, 100, 90, key="sj1")
+    sj_2 = st.slider("유수진 - 소통 능력", 0, 100, 85, key="sj2")
+    sj_3 = st.slider("유수진 - 위기 관리", 0, 100, 92, key="sj3")
+    sj_4 = st.slider("유수진 - 친화력", 0, 100, 80, key="sj4")
+    sj_5 = st.slider("유수진 - 열정 지수", 0, 100, 88, key="sj5")
+    sj_scores = [sj_1, sj_2, sj_3, sj_4, sj_5]
+    sj_total = sum(sj_scores)
+
+with col3:
+    st.subheader("👩‍🎨 이성희 능력치 심사")
+    sh_1 = st.slider("이성희 - 업무 추진력", 0, 100, 80, key="sh1")
+    sh_2 = st.slider("이성희 - 소통 능력", 0, 100, 95, key="sh2")
+    sh_3 = st.slider("이성희 - 위기 관리", 0, 100, 85, key="sh3")
+    sh_4 = st.slider("이성희 - 친화력", 0, 100, 92, key="sh4")
+    sh_5 = st.slider("이성희 - 열정 지수", 0, 100, 90, key="sh5")
+    sh_scores = [sh_1, sh_2, sh_3, sh_4, sh_5]
+    sh_total = sum(sh_scores)
 
 st.markdown("---")
 
 # ==========================================
-# [연애 종합 판정 구역] 퍼센트별 연애 능력치 매칭
+# [실시간 랭킹 시스템] 점수 비교 후 결과 도출
 # ==========================================
-if per is not None:
-    st.subheader(f"📊 AI 하트 분석 결과 (완벽도: {per}%)")
-    
-    if 0 <= per <= 35:
-        st.error("### 🌪️ [연애 등급: F] 자유분방한 나홀로 경주마형")
-        st.markdown("""
-        * **연애 능력치 지수:** 🧪 20 / 100 점
-        * **하트 매칭 결과:** 형태를 가늠하기 힘든 파격적이고 우발적인 하트입니다.
-        * **종합 연애 분석:** 당신은 연애할 때 상대방의 규칙이나 밀당에 얽매이는 것을 극도로 싫어하는 **독고다이 스타일**입니다! 내가 꽂히면 불꽃처럼 직진하지만, 내 개인 시간과 영역을 침범당하면 금방 식어버릴 수 있습니다.
-        * **연애 처방전:** 가끔은 상대방의 페이스에 맞춰주는 '정속 주행' 연애 연습이 필요합니다. 연락을 조금만 더 자주 해주세요!
-        """)
-        
-    elif 36 <= per <= 65:
-        st.warning("### 🧩 [연애 등급: C] 인간미 넘치는 감성파 밀당 밀크티형")
-        st.markdown("""
-        * **연애 능력치 지수:** 🧪 55 / 100 점
-        * **하트 매칭 결과:** 울퉁불퉁하지만 인간미와 정감이 가득 느껴지는 하트입니다.
-        * **종합 연애 분석:** 당신은 연애할 때 머리로 계산하기보다는 **마음이 이끄는 대로 움직이는 감정파**입니다! 가끔 서툴러서 삐걱거리거나 츤데레처럼 굴 때도 있지만, 그 모습 자체가 상대방에게 엄청난 인간적인 매력과 귀여움으로 다가갑니다.
-        * **연애 처방전:** 서운한 점이 생겼을 때 혼자 속으로 삭히다가 뿜어내지 말고, 완만하게 말로 표현하는 대화 스킬을 더하면 점수가 80점까지 수직 상승합니다!
-        """)
-        
-    elif 66 <= per <= 85:
-        st.info("### ⚖️ [연애 등급: A] 황금 비율의 연애 마스터 밸런서형")
-        st.markdown("""
-        * **연애 능력치 지수:** 🧪 85 / 100 점
-        * **하트 매칭 결과:** 좌우 대칭이 아주 보기 좋고 균형 잡힌 정석적인 하트입니다.
-        * **종합 연애 분석:** 당신은 **연애를 가장 건강하고 똑부러지게 잘하는 최고의 연애가**입니다! 밀고 당기기의 타이밍을 본능적으로 알고 있으며, 내 삶과 연애의 균형을 완벽하게 맞출 줄 압니다. 상대방을 편안하게 해주면서도 설렘을 유지하는 능력이 탁월합니다.
-        * **연애 처방전:** 이미 완벽합니다! 지금처럼 서로를 존중하는 다정한 연애를 유지하시면 평생 행복한 사랑을 이어갈 수 있습니다.
-        """)
-        
-    else:
-        st.success("### 💎 [연애 등급: SSS] 무결점 1% 완벽주의 로맨티스트 대주주형")
-        st.markdown("""
-        * **연애 능력치 지수:** 🧪 99 / 100 점
-        * **하트 매칭 결과:** 오차 1mm도 허용하지 않는 수학적 신의 대칭 하트입니다.
-        * **종합 연애 분석:** 당신은 연애에 있어서 **내 사람에게 모든 최고의 것을 서포트하려는 완벽주의 로맨티스트**입니다! 기념일을 칼같이 챙기는 것은 물론, 상대방의 동선과 취향까지 정밀하게 배려하는 완벽한 설계를 보여줍니다.
-        * **연애 처방전:** 가끔은 내 계획대로 연애 데이트가 흘러가지 않거나 상대방이 빈틈을 보여도, '그럴 수 있지' 하고 웃어넘기는 유연함 한 스푼만 추가해 보세요!
-        """)
-else:
-    st.info("💡 캔버스에 하트를 다 그리는 순간 AI가 자동으로 연애 능력치를 판독하여 이곳에 종합 보고서를 세이브합니다.")
+st.markdown("## 📊 배틀 스코어보드 및 최종 순위")
+
+# 데이터 구조화
+results = [
+    {"이름": "정혜영", "총점": hy_total, "평균": hy_total/5, "색상": "#FF6B6B"},
+    {"이름": "유수진", "총점": sj_total, "평균": sj_total/5, "색상": "#4DABF7"},
+    {"이름": "이성희", "총점": sh_total, "평균": sh_total/5, "색상": "#51CF66"}
+]
+
+# 총점 기준 내림차순 정렬
+ranked_results = sorted(results, key=lambda x: x["총점"], reverse=True)
+
+# 1등 우승자 브리핑 구역
+winner = ranked_results[0]
+st.markdown(f"""
+    <div class="winner-box">
+        <h3>👑 현재 배틀 리그 1위: <span style='color:{winner["색상"]}; font-size:1.6rem;'>{winner["이름"]}</span> 님</h3>
+        <p>종합 총점 <b>{winner["총점"]}점</b> (평균 {winner["평균"]:.1f}점)으로 압도적인 매력을 보여주고 있습니다!</p>
+    </div>
+""", unsafe_allow_html=True)
+
+# 전산 테이블 양식 출력
+c_rank, c_name, c_total, c_avg = st.columns(4)
+c_rank.markdown("**순위**")
+c_name.markdown("**이름**")
+c_total.markdown("**종합 총점**")
+c_avg.markdown("**평균 능력치**")
+st.markdown("<hr style='margin:5px 0;'>", unsafe_allow_html=True)
+
+for idx, rank in enumerate(ranked_results):
+    cr, cn, ct, ca = st.columns(4)
+    cr.write(f"🥇 {idx+1}등" if idx==0 else f"🥈 {idx+1}등" if idx==1 else f"🥉 {idx+1}등")
+    cn.markdown(f"<span style='color:{rank['색상']}; font-weight:bold;'>{rank['이름']}</span>", unsafe_allow_html=True)
+    ct.write(f"{rank['총점']} 점")
+    ca.write(f"{rank['평균']:.1f} 점")
+
+st.markdown("---")
+
+# ==========================================
+# [그래프 구역] 3인 오각형 레이더 차트 그리기
+# ==========================================
+st.markdown("### 🕸️ 3인 능력치 밸런스 비교 그래프")
+
+# 레이더 차트를 위한 원형 각도 계산
+angles = [n / float(N) * 2 * np.pi for n in range(N)]
+angles += angles[:1] # 다각형을 닫아주기 위해 시작점 추가
+
+fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+
+# 그래프 영문 폰트 및 기본 라벨 세팅 (한글 버그 방지를 위해 항목 영문 병기)
+labels = ['Push (추진)', 'Comm (소통)', 'Crisis (위기)', 'Friendly (친화)', 'Passion (열정)']
+plt.xticks(angles[:-1], labels, color='grey', size=10)
+
+# 1. 정혜영 데이터 레이더 그리기
+hy_graph = hy_scores + hy_scores[:1]
+ax.plot(angles, hy_graph, linewidth=2, linestyle='solid', label='정혜영', color='#FF6B6B')
+ax.fill(angles, hy_graph, '#FF6B6B', alpha=0.1)
+
+# 2. 유수진 데이터 레이더 그리기
+sj_graph = sj_scores + sj_scores[:1]
+ax.plot(angles, sj_graph, linewidth=2, linestyle='solid', label='유수진', color='#4DABF7')
+ax.fill(angles, sj_graph, '#4DABF7', alpha=0.1)
+
+# 3. 이성희 데이터 레이더 그리기
+sh_graph = sh_scores + sh_scores[:1]
+ax.plot(angles, sh_graph, linewidth=2, linestyle='solid', label='이성희', color='#51CF66')
+ax.fill(angles, sh_graph, '#51CF66', alpha=0.1)
+
+# 그래프 옵션 세팅
+plt.ylim(0, 100)
+plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
+fig.patch.set_alpha(0.0) # 스트림릿 테마 동기화
+
+st.pyplot(fig)
